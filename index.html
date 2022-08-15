@@ -1,19 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
+
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=100%, initial-scale=1.0">
     <title>Lilevil</title>
-    <link type="stylesheet" src="styles/main.css">
+    <link rel="stylesheet" href="styles/main.css">
     <script src="scripts/main.js"></script>
 
     <!--xterm-->
     <link rel="stylesheet" href="xterm/xterm.css" />
-    <script src=xterm/xterm.js"></script>
+    <script src="xterm/xterm.js"></script>
+    <script src="xterm/xterm-addon-fit.js"></script>
+
 </head>
 <body>
-        
-        
+    <di hidden>
+        <canvas id="glcanvas" width="0" height="0"></canvas>
+    </di>
+    <div id="display">
+        <div id="footer", class="footer blur">
+            <div id="wm" class="f-container"></div>
+            <div id="infos" class="f-container">
+                <p id="date" style="margin:2px;"></p>
+            </div>
+            <div id="systray" class="f-container">
+                <!--buy me a coffee?-->
+                <div id="links">
+                    <!--<img src="assets/icons/links.png" width="23px", height="23px">-->
+                </div>
+            </div>
+        </div>
+        <div id="terminals" class="terminals">
+
+        </div>
+    </div>
 </body>
 </html>

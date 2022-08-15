@@ -1,0 +1,48 @@
+{
+    "bin": {
+        "cat": {
+            "content": "({\n    description: \"see the inside of files\",\n    exec:(data)=>{\n        let {argv, psh, exit, signal, write, fs} = data\n\n        let path = argv[0]\n        if(!path)path=\".\"\n        const content = fs.readFile(psh.resolvePath(path))\n        if(\"error\" in content){\n            write(\"Error: \",content.error.message, \"\\n\\r\")\n            exit(1)\n        }\n        write(content.success.replace(/[^\\\\]?(\\n)/g, (_, p)=>_.replace(p, \"\\r\\n\")), \"\\r\\n\")\n        exit(0)\n    }\n})"
+        },
+        "help": {
+            "content": "({\n    description: \"help me!!\",\n    exec:(data)=>{\n        let {argv, psh, exit, signal, write, fs} = data\n\n        let message\n        if(argv[0]){\n            if(argv[0] in psh.builtins ){\n                message = message=argv[0]+\": \"+psh.builtins[argv[0]].description\n            } else {\n                const cmd = psh.vars.PATH.split(\":\").map(t=>splashfs.readFile(psh.resolvePath(t+\"/\"+argv[0]))).filter(t=>\"success\" in t)[0]\n\n                if(!cmd) message=argv[0]+\": command not found\"\n                else {\n                    const command = eval(cmd.success) //err that's bad but i have no other choices..\n\n                    if( typeof command.exec == \"function\"){\n                        psh.commands[argv[0]] = command\n                    } \n                    message = message=argv[0]+\": \"+command.description\n                }\n            }\n        } else { message = \n        `if you are familliar with terminals, this is fantastic\n        \\rif not try fooling around!\n        \\r\\nmost of commands are in $PATH (try ls $PATH)\n        \\rthere is some commands you can play with:\n        \\r\\n\\t${Object.keys(psh.builtins).join(\" \")}\n        \n        \\ryou can try \\`help <command>\\` e.g. \\`help ls\\``\n        }\n\n        write(message, \"\\r\\n\")\n    }\n})"
+        },
+        "ls": {
+            "content": "({\n    description: \"list files and directories!\",\n    exec:(data)=>{\n        let {argv, psh, exit, signal, write, fs} = data\n\n        const options = {all:false}\n\n        if(argv.includes(\"-a\") || argv.includes(\"--all\")){\n            options.all = true\n            const index = argv.indexOf(\"-a\") ?? argv.indexOf(\"--all\")\n            argv = [...argv.slice(0, index), ...argv.slice(index+1)]\n        }\n\n        let path = argv[0]\n        if(!path)path=\".\"\n        const content = fs.readDir(psh.resolvePath(path))\n        if(\"error\" in content){\n            write(\"Error: \",content.error.message, \"\\n\\r\")\n            exit(1)\n        }\n\n        let mapped = content.success.map(e=>{\n            if(e.startsWith(\".\")&&!options.all)return\n            const stats = fs.stats(psh.resolvePath(path+\"/\"+e))\n            if(stats.dir) return \"\\u001b[36m\"+e+\"\\u001b[0m/\"\n            if(stats.file) return e\n        }).filter(t=>t!==undefined)\n        write(mapped.join(\" \"), \"\\r\\n\")\n        exit(0)\n    }\n})"
+        },
+        "neofetch": {
+            "content": "({\n    description: \"the most important command for a linux user!\",\n    exec:(data)=>{\n        let {argv, psh, exit, signal, write, fs} = data\n\n        const { USER, HOSTNAME, SHELL } = psh.vars\n\n        const separator = \"-\".repeat((USER+\"@\"+HOSTNAME).length)\n\n        let _duration = Math.floor((Date.now() - wm.started)/1000), d= {}\n\n        d.s = _duration%60\n        d.m = Math.floor(_duration/60)%60\n        d.h = Math.floor(_duration/60/60)%24\n        const duration = `${d.h>0?d.h+\"H \":\"\"}${d.m>0?d.m+\"min \":\"\"}${d.s>0?d.s+\"s\":\"\"}`\n\n\n        let gl = document.getElementById(\"glcanvas\").getContext(\"experimental-webgl\");\n        function getUnmaskedInfo(gl) {\n            var unMaskedInfo = {\n              renderer: '',\n              vendor: ''\n            };\n      \n            var dbgRenderInfo = gl.getExtension(\"WEBGL_debug_renderer_info\");\n            if (dbgRenderInfo != null) {\n              unMaskedInfo.renderer = gl.getParameter(dbgRenderInfo.UNMASKED_RENDERER_WEBGL);\n              unMaskedInfo.vendor = gl.getParameter(dbgRenderInfo.UNMASKED_VENDOR_WEBGL);\n            }\n      \n            return unMaskedInfo;\n          }\n\n        const cmds = psh.vars.PATH.split(\":\").map(t=>fs.readDir(t).success.length).reduce((a,b)=>a+b, 0)\n\n        const dark = [40,41,42,43,44,45,46,47].map(t=>psh.esc(`[${t}m `).repeat(3)).join('')\n        const light = [100,101,102,103,104,105,106,107].map(t=>psh.esc(`[${t}m `).repeat(3)).join('')\n\n\n        const message = \n`                                  \\u001b[92m${USER}\\u001b[0m@\\u001b[92m${HOSTNAME}\\u001b[0m\n\\r        7G&@@B!  :YB&&B?          ${separator}\n\\r       J@@@@@@@!!&@@@@@@7         \\u001b[91mOS\\u001b[0m: ${navigator.oscpu ?? '-'}\n\\r   .   P@@@@@@@B#@@@@@@@!         \\u001b[91mHost\\u001b[0m: ${navigator.appCodeName??\"-\"}\n\\r^5B#BP!~&@@@@@@P#@@@@@@5^?YY!.    \\u001b[91mCommands\\u001b[0m: ${cmds+Object.keys(psh.builtins).length}\n\\r&@@@@@@G!G@@@&G.!#@@@#YP@@@@@B    \\u001b[91mUptime\\u001b[0m: ${duration}\n\\r&@@@@@@@P :JGGYJ?77!~:B@@@@@@&    \\u001b[91mShell\\u001b[0m: ${SHELL}\n\\r~&@@@@@@&.J&@@@@@@&? ~@@@@@@&!    \\u001b[91mResolution\\u001b[0m: ${screen.width} x ${screen.height}\n\\r :YB&###PG@@@@@@@@@@G!P&&@&5^     \\u001b[91mGPU\\u001b[0m: ${getUnmaskedInfo(gl).renderer ?? \"-\"}\n\\r    :Y#&@@@@@@@@@@@@@@#GJ^.       \\u001b[91mLocale\\u001b[0m: ${navigator.language}\n\\r   .G@@@@@@@@@@@@@@@@@@@@P    \n\\r   ~@@@@@@@@@@@@@@@@@@@@@@^   \n\\r   .5@@@@@@@@@@@@@@@@@@@@Y        ${dark}\\u001b[0m\n\\r     ~YG&@@&#G55G#&@@&BY~         ${light}\\u001b[0m\n\\r\\n`\n        write(message)\n    }\n})"
+        }
+    },
+    "boot": {},
+    "dev": {},
+    "etc": {},
+    "home": {
+        "little": {
+            ".cache": {},
+            ".config": {},
+            ".themes": {},
+            "Bureau": {},
+            "Documents": {},
+            "Images": {},
+            "Musique": {},
+            "Public": {},
+            "README": {
+                "content": "hello world :D"
+            },
+            "Telechargements": {},
+            "Videos": {}
+        }
+    },
+    "lib": {},
+    "media": {},
+    "mnt": {},
+    "opt": {},
+    "proc": {},
+    "root": {},
+    "run": {},
+    "sbin": {},
+    "sys": {},
+    "tmp": {},
+    "usr": {},
+    "var": {}
+}
